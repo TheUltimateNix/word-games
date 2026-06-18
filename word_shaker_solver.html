@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Word Shaker Solver</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #0f1117;
+    --surface:   #1a1d27;
+    --border:    #2a2d3a;
+    --accent:    #7c6af7;
+    --accent2:   #4ecdc4;
+    --text:      #e8e9f0;
+    --muted:     #6b6f84;
+    --tile-bg:   #22253a;
+    --tile-hover:#2d3150;
+    --tile-active:#7c6af7;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+  }
+
+  header h1 {
+    font-size: clamp(1.6rem, 4vw, 2.4rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  header p {
+    color: var(--muted);
+    margin-top: 0.4rem;
+    font-size: 0.9rem;
+  }
+
+  .controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .controls label {
+    font-size: 0.85rem;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .controls select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.4rem 0.7rem;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+
+  .grid-wrapper {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+  }
+
+  #board {
+    display: grid;
+    gap: 6px;
+    /* grid-template-columns set by JS */
+  }
+
+  #board input {
+    width: 48px;
+    height: 48px;
+    text-align: center;
+    background: var(--tile-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 1.1rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    caret-color: var(--accent);
+    transition: background 0.15s, border-color 0.15s;
+    outline: none;
+  }
+
+  #board input:focus {
+    background: var(--tile-hover);
+    border-color: var(--accent);
+  }
+
+  #board input.filled {
+    border-color: #3a3d55;
+  }
+
+  .btn-row {
+    display: flex;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+  }
+
+  button {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: 0.9rem;
+    padding: 0.6rem 1.4rem;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+
+  button:active { transform: scale(0.97); }
+
+  #solveBtn {
+    background: linear-gradient(135deg, var(--accent), #9b8df7);
+    color: #fff;
+  }
+
+  #clearBtn {
+    background: var(--surface);
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+
+  #pasteBtn {
+    background: var(--surface);
+    color: var(--accent2);
+    border: 1px solid var(--border);
+  }
+
+  button:hover { opacity: 0.88; }
+
+  .paste-hint {
+    text-align: center;
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-bottom: 1.5rem;
+  }
+
+  #status {
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--muted);
+    min-height: 1.2em;
+    margin-bottom: 1rem;
+  }
+
+  #status.running { color: var(--accent2); }
+  #status.done    { color: var(--accent); }
+  #status.error   { color: #f97068; }
+
+  /* Results */
+  #results { max-width: 860px; margin: 0 auto; }
+
+  .summary-bar {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+    margin-bottom: 2rem;
+    padding: 1rem 1.5rem;
+    background: var(--surface);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+  }
+
+  .summary-stat { text-align: center; }
+  .summary-stat .val {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1;
+  }
+  .summary-stat .lbl {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 0.2rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+  }
+
+  .table-wrap { overflow-x: auto; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+  }
+
+  thead th {
+    text-align: center;
+    padding: 0.5rem 0.6rem;
+    color: var(--muted);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+
+  thead th:first-child { text-align: left; }
+
+  tbody tr:hover td { background: var(--tile-hover); }
+
+  tbody td {
+    padding: 0.45rem 0.6rem;
+    text-align: center;
+    border-bottom: 1px solid #1e2130;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.82rem;
+    transition: background 0.1s;
+  }
+
+  tbody td:first-child {
+    text-align: left;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--accent2);
+  }
+
+  .cell-num { color: var(--text); }
+  .cell-zero { color: var(--border); }
+  .cell-high {
+    background: rgba(124,106,247,0.15);
+    color: var(--accent);
+    font-weight: 700;
+    border-radius: 4px;
+  }
+
+  tfoot td {
+    padding: 0.5rem 0.6rem;
+    text-align: center;
+    font-weight: 700;
+    font-family: 'Space Mono', monospace;
+    color: var(--accent);
+    border-top: 2px solid var(--border);
+  }
+
+  tfoot td:first-child {
+    text-align: left;
+    font-family: 'Space Grotesk', sans-serif;
+    color: var(--muted);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+  }
+
+  .min-len-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+
+  .min-len-row input[type=range] {
+    accent-color: var(--accent);
+    width: 120px;
+  }
+
+  .min-len-row span { color: var(--text); font-weight: 600; font-family: 'Space Mono', monospace; }
+
+  footer {
+    text-align: center;
+    margin-top: 3rem;
+    font-size: 0.75rem;
+    color: #3a3d55;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Word Shaker Solver</h1>
+  <p>Enter your board — get word counts by letter &amp; length, not the answers</p>
+</header>
+
+<div class="controls">
+  <label>Grid size
+    <select id="sizeSelect">
+      <option value="4">4 × 4</option>
+      <option value="5">5 × 5</option>
+      <option value="6">6 × 6</option>
+      <option value="7">7 × 7</option>
+      <option value="8" selected>8 × 8</option>
+    </select>
+  </label>
+  <label>Min word length
+    <select id="minLen">
+      <option value="2">2+</option>
+      <option value="3" selected>3+</option>
+      <option value="4">4+</option>
+      <option value="5">5+</option>
+    </select>
+  </label>
+</div>
+
+<div class="grid-wrapper">
+  <div id="board"></div>
+</div>
+
+<div class="btn-row">
+  <button id="pasteBtn" title="Paste 64 letters (left-to-right, top-to-bottom)">⌨ Paste letters</button>
+  <button id="solveBtn">▶ Solve</button>
+  <button id="clearBtn">✕ Clear</button>
+</div>
+
+<div class="paste-hint">Tip: click "Paste letters" and type/paste your board letters in one go (left→right, top→bottom, spaces optional)</div>
+
+<div id="status"></div>
+<div id="results"></div>
+
+<footer>Word Shaker Solver · runs entirely in your browser · no data sent anywhere</footer>
+
+<script>
+// ─── Dictionary ──────────────────────────────────────────────────────────────
+// We load the dictionary from an inline compressed word list.
+// Using a broad English word list embedded as a Set for fast lookup.
+// Words sourced from common Scrabble / Boggle dictionaries (TWL/SOWPODS subset).
+// Due to file size constraints we use a fetch against a public word list.
+// Falls back to a built-in ~5000 word starter set if offline.
+
+let DICT = null;
+let DICT_TRIE = null;
+
+async function loadDictionary() {
+  setStatus('Loading dictionary…', 'running');
+  // Try to load a known public word list
+  try {
+    const r = await fetch('https://raw.githubusercontent.com/dwyl/english-words/master/words_alpha.txt');
+    if (!r.ok) throw new Error('fetch failed');
+    const text = await r.text();
+    DICT = new Set(text.split('\n').map(w => w.trim().toLowerCase()).filter(w => w.length >= 2));
+    buildTrie(DICT);
+    setStatus(`Dictionary loaded (${DICT.size.toLocaleString()} words). Enter your board and solve!`, 'done');
+  } catch(e) {
+    DICT = new Set(FALLBACK_WORDS);
+    buildTrie(DICT);
+    setStatus(`Offline mode — using built-in dictionary (${DICT.size.toLocaleString()} words). Results may be limited.`, 'done');
+  }
+}
+
+// Trie for fast prefix pruning
+function buildTrie(words) {
+  DICT_TRIE = Object.create(null);
+  for (const w of words) {
+    let node = DICT_TRIE;
+    for (const ch of w) {
+      if (!node[ch]) node[ch] = Object.create(null);
+      node = node[ch];
+    }
+    node.$ = true;
+  }
+}
+
+function trieHasPrefix(prefix) {
+  let node = DICT_TRIE;
+  for (const ch of prefix) {
+    if (!node[ch]) return false;
+    node = node[ch];
+  }
+  return true;
+}
+
+function trieIsWord(word) {
+  let node = DICT_TRIE;
+  for (const ch of word) {
+    if (!node[ch]) return false;
+    node = node[ch];
+  }
+  return !!node.$;
+}
+
+// ─── Board UI ────────────────────────────────────────────────────────────────
+let gridSize = 8;
+
+function buildGrid() {
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+  board.style.gridTemplateColumns = `repeat(${gridSize}, 48px)`;
+  for (let i = 0; i < gridSize * gridSize; i++) {
+    const inp = document.createElement('input');
+    inp.maxLength = 2;
+    inp.dataset.idx = i;
+    inp.autocomplete = 'off';
+    inp.spellcheck = false;
+    inp.addEventListener('input', onTileInput);
+    inp.addEventListener('keydown', onTileKey);
+    board.appendChild(inp);
+  }
+}
+
+function onTileInput(e) {
+  const inp = e.target;
+  const val = inp.value.replace(/[^a-zA-Z]/g, '').slice(-1).toUpperCase();
+  inp.value = val;
+  val ? inp.classList.add('filled') : inp.classList.remove('filled');
+  if (val) {
+    const next = inp.parentElement.querySelector(`[data-idx="${+inp.dataset.idx + 1}"]`);
+    if (next) next.focus();
+  }
+}
+
+function onTileKey(e) {
+  const inp = e.target;
+  const idx = +inp.dataset.idx;
+  if (e.key === 'Backspace' && !inp.value) {
+    const prev = inp.parentElement.querySelector(`[data-idx="${idx - 1}"]`);
+    if (prev) { prev.value = ''; prev.classList.remove('filled'); prev.focus(); }
+  }
+  if (e.key === 'ArrowRight') { const n = inp.parentElement.querySelector(`[data-idx="${idx+1}"]`); if(n) n.focus(); }
+  if (e.key === 'ArrowLeft')  { const n = inp.parentElement.querySelector(`[data-idx="${idx-1}"]`); if(n) n.focus(); }
+  if (e.key === 'ArrowDown')  { const n = inp.parentElement.querySelector(`[data-idx="${idx+gridSize}"]`); if(n) n.focus(); }
+  if (e.key === 'ArrowUp')    { const n = inp.parentElement.querySelector(`[data-idx="${idx-gridSize}"]`); if(n) n.focus(); }
+}
+
+document.getElementById('sizeSelect').addEventListener('change', e => {
+  gridSize = +e.target.value;
+  buildGrid();
+  document.getElementById('results').innerHTML = '';
+  setStatus('');
+});
+
+document.getElementById('clearBtn').addEventListener('click', () => {
+  document.querySelectorAll('#board input').forEach(i => { i.value = ''; i.classList.remove('filled'); });
+  document.getElementById('results').innerHTML = '';
+  setStatus('');
+});
+
+document.getElementById('pasteBtn').addEventListener('click', () => {
+  const raw = prompt(`Paste your ${gridSize*gridSize} board letters (spaces/commas ignored, left→right top→bottom):`);
+  if (!raw) return;
+  const letters = raw.replace(/[^a-zA-Z]/g, '').toUpperCase().split('');
+  const inputs = document.querySelectorAll('#board input');
+  inputs.forEach((inp, i) => {
+    inp.value = letters[i] || '';
+    inp.value ? inp.classList.add('filled') : inp.classList.remove('filled');
+  });
+});
+
+// ─── Solver ──────────────────────────────────────────────────────────────────
+function getBoard() {
+  return Array.from(document.querySelectorAll('#board input')).map(i => i.value.toLowerCase());
+}
+
+function neighbours(idx, size) {
+  const row = Math.floor(idx / size), col = idx % size;
+  const result = [];
+  for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+    if (dr === 0 && dc === 0) continue;
+    const r = row + dr, c = col + dc;
+    if (r >= 0 && r < size && c >= 0 && c < size) result.push(r * size + c);
+  }
+  return result;
+}
+
+function solve(board, size, minLen) {
+  const found = new Set();
+  const NEIGH = Array.from({length: size*size}, (_, i) => neighbours(i, size));
+
+  function dfs(idx, path, word, node) {
+    const ch = board[idx];
+    if (!node[ch]) return;
+    const newNode = node[ch];
+    const newWord = word + ch;
+    const newPath = path | (1 << idx);
+
+    if (newWord.length >= minLen && newNode.$) found.add(newWord);
+    if (newWord.length < size * 2) { // reasonable max
+      for (const nidx of NEIGH[idx]) {
+        if (!(newPath & (1 << nidx))) {
+          dfs(nidx, newPath, newWord, newNode);
+        }
+      }
+    }
+  }
+
+  // For large boards (>4) use BigInt paths to avoid bit overflow
+  // Actually for 8x8=64 cells we need BigInt
+  const useBigInt = size * size > 30;
+
+  function dfsB(idx, path, word, node) {
+    const ch = board[idx];
+    if (!node[ch]) return;
+    const newNode = node[ch];
+    const newWord = word + ch;
+    const newPath = path | (1n << BigInt(idx));
+
+    if (newWord.length >= minLen && newNode.$) found.add(newWord);
+    if (newWord.length < 15) {
+      for (const nidx of NEIGH[idx]) {
+        if (!(newPath & (1n << BigInt(nidx)))) {
+          dfsB(nidx, newPath, newWord, newNode);
+        }
+      }
+    }
+  }
+
+  for (let i = 0; i < size * size; i++) {
+    if (useBigInt) dfsB(i, 0n, '', DICT_TRIE);
+    else dfs(i, 0, '', DICT_TRIE);
+  }
+
+  return [...found];
+}
+
+function setStatus(msg, cls = '') {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = cls;
+}
+
+document.getElementById('solveBtn').addEventListener('click', async () => {
+  if (!DICT) { setStatus('Dictionary still loading, please wait…', 'error'); return; }
+  const board = getBoard();
+  const minLen = +document.getElementById('minLen').value;
+  const missing = board.filter(c => !c).length;
+  if (missing > 0) { setStatus(`Board is incomplete — ${missing} cells empty.`, 'error'); return; }
+
+  setStatus('Solving…', 'running');
+  document.getElementById('results').innerHTML = '';
+
+  // Yield to browser paint
+  await new Promise(r => setTimeout(r, 20));
+
+  const words = solve(board, gridSize, minLen);
+
+  if (!words.length) {
+    setStatus('No words found. Check your board is filled in correctly.', 'error');
+    return;
+  }
+
+  renderResults(words, minLen);
+  setStatus(`Found ${words.length} words. Good luck! 🎯`, 'done');
+});
+
+function renderResults(words, minLen) {
+  // Find max length
+  const maxLen = Math.max(...words.map(w => w.length));
+  const lengths = Array.from({length: maxLen - minLen + 1}, (_, i) => i + minLen);
+
+  // Build counts keyed by [startLetter][length]
+  const letters = 'abcdefghijklmnopqrstuvwxyz';
+  const counts = {};
+  for (const l of letters) {
+    counts[l] = {};
+    for (const len of lengths) counts[l][len] = 0;
+  }
+
+  for (const w of words) {
+    const l = w[0];
+    if (counts[l] && counts[l][w.length] !== undefined) counts[l][w.length]++;
+  }
+
+  // Filter to letters that have at least one word
+  const usedLetters = letters.split('').filter(l => Object.values(counts[l]).some(v => v > 0));
+
+  // Column totals
+  const colTotals = {};
+  for (const len of lengths) colTotals[len] = usedLetters.reduce((s, l) => s + (counts[l][len] || 0), 0);
+  const grandTotal = words.length;
+
+  // Max count for highlighting
+  const allCounts = usedLetters.flatMap(l => lengths.map(len => counts[l][len]));
+  const maxCount = Math.max(...allCounts);
+  const thresh = Math.max(3, Math.floor(maxCount * 0.6));
+
+  // Group lengths into bands for the table header
+  // Show individual columns up to length 8, then "9+" combined
+  const showLengths = lengths.filter(l => l <= 8);
+  const hasLong = lengths.some(l => l > 8);
+
+  // Summary stats
+  const longestWord = words.reduce((a, b) => a.length >= b.length ? a : b, '');
+
+  let html = `
+  <div class="summary-bar">
+    <div class="summary-stat"><div class="val">${grandTotal}</div><div class="lbl">Total words</div></div>
+    <div class="summary-stat"><div class="val">${usedLetters.length}</div><div class="lbl">Starting letters</div></div>
+    <div class="summary-stat"><div class="val">${longestWord.length}</div><div class="lbl">Longest (${longestWord.length} letters)</div></div>
+    <div class="summary-stat"><div class="val">${words.filter(w=>w.length>=6).length}</div><div class="lbl">6+ letter words</div></div>
+  </div>
+
+  <div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Letter</th>
+        ${showLengths.map(l => `<th>${l}L</th>`).join('')}
+        ${hasLong ? '<th>9+L</th>' : ''}
+        <th>Total</th>
+      </tr>
+    </thead>
+    <tbody>`;
+
+  for (const l of usedLetters) {
+    const rowTotal = Object.values(counts[l]).reduce((a,b)=>a+b,0);
+    html += `<tr><td>${l.toUpperCase()}</td>`;
+    for (const len of showLengths) {
+      const v = counts[l][len] || 0;
+      if (v === 0) html += `<td class="cell-zero">—</td>`;
+      else if (v >= thresh) html += `<td class="cell-high">${v}</td>`;
+      else html += `<td class="cell-num">${v}</td>`;
+    }
+    if (hasLong) {
+      const longCount = lengths.filter(len=>len>8).reduce((s,len)=>s+(counts[l][len]||0),0);
+      html += longCount ? `<td class="cell-num">${longCount}</td>` : `<td class="cell-zero">—</td>`;
+    }
+    html += `<td class="cell-num" style="color:var(--accent2)">${rowTotal}</td></tr>`;
+  }
+
+  html += `</tbody><tfoot><tr><td>Totals</td>`;
+  for (const len of showLengths) {
+    html += `<td>${colTotals[len] || 0}</td>`;
+  }
+  if (hasLong) {
+    const longTotal = lengths.filter(l=>l>8).reduce((s,len)=>s+(colTotals[len]||0),0);
+    html += `<td>${longTotal}</td>`;
+  }
+  html += `<td>${grandTotal}</td></tr></tfoot></table></div>`;
+
+  document.getElementById('results').innerHTML = html;
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+buildGrid();
+loadDictionary();
+
+// ─── Fallback word list (used offline) ───────────────────────────────────────
+const FALLBACK_WORDS = [
+"aa","ab","ad","ae","ag","ah","ai","al","am","an","ar","as","at","aw","ax","ay",
+"ba","be","bi","bo","by","da","de","do","ed","ef","eh","el","em","en","er","es",
+"et","ex","fa","fe","gi","go","ha","he","hi","hm","ho","id","if","in","is","it",
+"jo","ka","ki","la","li","lo","ma","me","mi","mm","mo","mu","my","na","ne","no",
+"nu","od","oe","of","oh","oi","om","on","op","or","os","ow","ox","oy","pa","pe",
+"pi","po","qi","re","sh","si","so","ta","ti","to","uh","um","un","up","us","ut",
+"we","wo","xi","xu","ya","ye","yo","za",
+"ace","act","add","age","ago","aid","aim","air","ale","all","ant","ape","apt",
+"arc","are","ark","arm","art","ash","ask","ate","awe","axe","aye",
+"bad","bag","ban","bar","bat","bay","bed","beg","bet","bid","big","bit","bog",
+"bow","box","boy","bud","bug","bun","bus","but","buy",
+"cab","can","cap","car","cat","cob","cod","cog","cop","cow","cry","cub","cup","cut",
+"dab","dam","day","den","dew","did","dig","dim","dip","dog","dot","dry","dub","dug","dun","duo","dye",
+"ear","eat","egg","ego","elf","elk","elm","end","era","eve","ewe","eye",
+"fad","fan","far","fat","fax","fed","few","fib","fig","fin","fit","fix","fly","fog","for","fox","fry","fun","fur",
+"gag","gap","gas","gel","gem","get","gig","gin","gnu","god","got","gun","gut","guy","gym",
+"had","ham","has","hat","hay","hem","hen","her","hid","him","hip","his","hit","hob","hog","hop","hot","how","hub","hue","hug","hum","hut",
+"ice","icy","ill","imp","ink","inn","ion","ire","ivy",
+"jab","jag","jam","jar","jaw","jay","jet","jig","job","jog","jot","joy","jug","jut",
+"keg","key","kid","kin","kit",
+"lab","lag","lap","law","lax","lay","lea","led","leg","let","lid","lip","lit","log","lot","low",
+"mad","man","map","mar","mat","maw","men","mid","mix","mob","mop","mud","mug","mum",
+"nab","nag","nap","net","new","nil","nit","nob","nod","nor","not","now","nun","nut",
+"oak","oar","oat","odd","ode","off","oil","old","opt","orb","ore","our","out","owe","owl","own",
+"pad","pal","pan","pap","par","pat","paw","pay","pea","peg","pen","pep","pet","pie","pig","pin","pit","ply","pod","pop","pot","pow","pro","pub","pun","pup","pus","put",
+"rag","ram","ran","rap","rat","raw","ray","red","ref","rep","rev","rid","rig","rim","rip","rob","rod","rot","row","rub","rug","rum","run","rut","rye",
+"sad","sag","sap","sat","saw","say","sea","set","sew","she","shy","sin","sip","sit","six","ski","sky","sly","sob","sod","son","sop","sow","soy","spa","spy","sty","sub","sue","sum","sun","sup",
+"tab","tan","tap","tar","tax","ten","the","tie","tin","tip","toe","ton","too","top","tot","tow","toy","try","tub","tug","two",
+"urn","use",
+"van","vat","vet","vex","via","vie","vim","vow",
+"wad","wag","war","was","wax","web","wed","wet","who","why","wig","win","wit","woe","wok","won","woo","wry",
+"yak","yam","yap","yew","you",
+"zap","zed","zip","zoo",
+"able","ache","acid","acre","aged","also","ante","arch","area","arms","army","arts",
+"back","bake","bale","ball","band","bane","bare","bark","barn","base","bash","bath","bead","beam",
+"bean","bear","beat","beef","been","beer","bell","belt","bend","best","bind","bird","bite","blew",
+"bloc","blog","blow","blue","blur","boat","bold","bolt","bone","book","boom","boot","bore","born",
+"both","bred","brew","brow","buff","bull","bump","burn","burp","bury","buzz",
+"cage","cake","calf","call","calm","came","cane","card","care","cart","case","cash","cast","cave",
+"cell","cent","chap","char","chat","chew","chin","chip","chop","cite","city","clad","clam","clap",
+"claw","clay","clew","clip","clod","clog","clop","clot","club","clue","coal","coat","coil","coin",
+"cold","cole","come","cone","cook","cool","cope","cord","core","corn","cost","cosy","couch","coup",
+"cozy","cram","crap","crew","crop","crow","cube","cure","curl","damp","dare","dark","dart","dash",
+"data","date","dawn","dead","deaf","deal","dear","deed","deep","deer","deny","desk","diet","dire",
+"dirt","disc","dish","disk","dive","dock","does","dome","done","door","dose","dove","down","drag",
+"draw","drew","drip","drop","drug","drum","dual","dull","dumb","dump","dune","dusk","dust","duty",
+"each","earl","earn","ease","east","edge","emit","epic","even","ever","evil","exam","exit","expo",
+"face","fact","fade","fail","fair","fake","fall","fame","fare","farm","fast","fate","fear","feat",
+"feel","feet","fell","felt","fend","fern","file","fill","film","find","fine","fire","firm","fish",
+"fist","flag","flat","flaw","flea","fled","flew","flex","flip","flit","flow","foam","fold","folk",
+"fond","font","food","fool","foot","ford","fore","fork","form","fort","foul","four","free","frog",
+"from","fuel","full","fume","fuse","fuss",
+"gait","gale","gall","game","gape","garb","gate","gave","gaze","gear","gene","germ","gift","gill",
+"give","glad","glee","glen","glow","glue","gnat","goat","goes","gold","golf","gone","good","goon",
+"gore","gosh","gown","grab","gram","gray","grew","grid","grin","grip","grit","groan","grow","grub",
+"gulf","gull","gulp","gust",
+"hack","hail","hair","half","hall","halt","hand","hang","hard","hare","harm","have","hawk","head",
+"heal","heap","hear","heat","heel","held","helm","help","here","hero","hewn","hide","high","hill",
+"hint","hire","hold","hole","home","hood","hook","horn","host","hour","hung","hunt","hymn",
+"icon","idea","idle","inch","into","iron","isle",
+"jade","jail","jeer","jest","join","joke","jolt","junk","just",
+"keen","keep","kern","kick","kill","kind","king","kiss","knit","knob","knot","know",
+"lace","lack","laid","lake","lamb","lamp","land","lane","last","late","laud","lead","leaf","lean",
+"leap","left","lend","lens","lent","life","lift","like","lime","line","link","lion","list","live",
+"load","loan","lock","loft","long","look","loom","loop","lore","lose","loss","lost","loud","love",
+"luck","lull","lump","lung","lure","lurk","lust",
+"made","mail","main","make","male","mall","mane","mare","mark","mast","mate","maze","meal","mean",
+"meat","meet","melt","menu","mere","mesh","mess","mice","mild","mile","mill","mind","mine","mint",
+"mist","mode","mole","mood","moon","moor","more","most","move","much","muse","must","myth",
+"nail","name","nape","navy","near","neck","need","nest","news","next","nice","nine","node","none","norm","nose","note",
+"oath","obey","once","only","onto","open","over","owed","owns",
+"pace","pack","page","paid","pain","pair","pale","palm","park","part","pass","past","path","pave",
+"peak","peel","peer","pick","pier","pike","pile","pipe","plan","play","plea","plod","plop","plot",
+"plow","ploy","plug","plum","plus","poem","poet","poke","pole","poll","polo","pond","pony","pool",
+"poor","pore","port","pose","post","pour","pray","prey","prim","prod","prop","pull","pump","pure",
+"push",
+"quiz","race","rack","raid","rail","rain","rake","rank","rant","rape","rare","rate","read","real",
+"reap","rear","reel","reef","rely","rend","rent","rest","rice","rich","ride","rife","ring","riot",
+"rise","risk","rite","road","roam","roar","robe","rock","role","roll","roof","room","root","rope",
+"rose","rout","rove","rule","rush",
+"safe","sage","sail","sale","salt","same","sand","sane","save","scan","scar","seam","seat","seed",
+"seek","self","sell","send","sent","shed","shin","ship","shoe","shop","shot","show","shut","sick",
+"side","sigh","silk","sill","site","size","skin","skip","slab","slam","slap","slat","slid","slim",
+"slip","slit","slot","slow","slug","snap","snob","snug","soak","soap","soar","sock","soft","soil",
+"sole","some","song","soon","sort","soul","soup","sour","span","spar","spin","spit","spot","spun",
+"stab","stag","star","stay","stem","step","stew","stir","stop","store","stub","stud","stun","such",
+"suit","sulk","sung","sunk","sure","surf","swam","swan","swap","swat","sway","swim","swum",
+"tale","tall","tame","tarn","task","team","tear","teat","tell","tend","tent","term","test","text",
+"than","that","them","then","they","this","thorn","thou","thus","tide","tidy","till","time","tire",
+"told","toll","tomb","tone","took","tool","tore","torn","toss","town","trap","tray","trek","trim",
+"trio","trip","trod","true","tube","tuft","tune","turf","turn","twig","twin","type",
+"ugly","undo","unit","upon","used","user",
+"vale","vary","vast","veil","vein","verb","very","view","vine","void","volt",
+"wade","wage","wake","walk","wall","wand","want","ward","warm","warn","warp","wart","wave","weak",
+"weal","wean","weed","week","weep","weld","well","welt","wend","went","were","west","when","whip",
+"wide","wile","will","wilt","wind","wine","wing","wire","wise","wish","with","wolf","wood","wool",
+"word","wore","work","worm","worn","wove","wrap","wren","writ",
+"yard","yarn","yawn","year","yell","your",
+"zeal","zero","zest","zone",
+"abide","abler","about","above","abuse","acres","acute","adore","adult","after","again","agile",
+"agony","agree","ahead","aisle","alarm","album","alert","alibi","alien","align","alike","alley",
+"allow","alone","along","aloof","aloud","alpha","alter","amaze","angel","anger","angle","angry",
+"anime","ankle","annex","annoy","antic","anvil","apart","apple","apply","arena","argue","arise",
+"array","aside","asked","atlas","atone","attic","audio","audit","avail","avoid","awake","award",
+"aware","awful",
+"badge","badly","bagel","baker","basic","basis","batch","beach","beard","beast","begin","being",
+"below","berry","beset","bible","biome","black","blade","blame","bland","blank","blast","blaze",
+"bleed","blend","bless","blimp","blind","block","blood","bloom","blown","board","boast","bogus",
+"bonus","boost","booth","bored","botch","bough","brace","braid","brain","brake","brave","bravo",
+"brawl","bread","break","bride","brief","brine","brink","broad","broil","brook","brown","brunt",
+"brush","build","built","bunch","burnt","burst",
+"cabin","candy","cargo","carry","catch","cause","cease","chain","chair","chalk","champ","chaos",
+"charm","chart","chase","check","cheek","cheer","chess","chest","chief","child","chill","choir",
+"chord","chore","chose","chuck","chunk","churn","cigar","civil","claim","clash","clasp","class",
+"clean","clear","clerk","click","cliff","cling","clock","close","cloud","clove","coach","coast",
+"could","count","court","cover","craft","crane","crash","crawl","creak","cream","crime","crimp",
+"crisp","cross","croup","crowd","crown","cruel","crumb","crush","crypt","curly","curve",
+"daily","daisy","dance","dared","decoy","delay","delta","depot","depth","derby","dirty","dizzy",
+"dodge","doing","doubt","dough","draft","drain","drama","drink","drive","drove","duchy","dwell",
+"eagle","early","easel","eight","elite","email","ember","empty","enemy","enjoy","enter","equal",
+"equip","error","essay","event","every","exact","extra",
+"fable","faced","faint","faith","fancy","fatal","fault","feast","fence","fetch","fever","fewer",
+"fiery","fifth","fifty","fight","finch","first","fixed","fjord","flank","flesh","flint","flock",
+"flood","floss","flour","fluff","fluid","flute","foggy","force","forge","found","franc","frank",
+"fraud","fresh","frost","froze","froze","fruit","fully","fungi","funny",
+"gauge","ghost","girth","given","glade","gland","glare","glass","glide","glint","globe","gloom",
+"gloss","glove","going","grace","grade","grain","grand","grant","grasp","grass","grate","grave",
+"graze","great","greed","green","greet","grief","grind","groan","groin","grope","group","grout",
+"grove","grudge","gruel","grunt","guard","guess","guide","guild","guile","guise","gusto",
+"habit","hands","happy","harsh","haven","heart","heavy","hedge","hence","herbs","hippo","hitch",
+"hoard","hobby","holly","homer","honey","honor","horse","hotel","house","hover","human","humus",
+"hurry","hyper",
+"image","imply","index","indie","infer","inner","input","inter","intro","issue",
+"ivory","japan","jelly","jewel","joust","judge","juice","juicy","jumbo","jumpy","knave","kneel",
+"knife","knock","known",
+"label","lance","large","laser","later","laugh","layer","leach","leave","ledge","level","light",
+"limit","linen","lingo","liner","liter","liver","logic","lower","lucid","lusty",
+"magic","major","maker","manga","manor","maple","march","major","match","mayor","media","mercy",
+"merit","metal","might","model","money","month","moose","moral","mossy","mound","mount","mourn",
+"mouse","mouth","muddy","mural","music",
+"naive","nanny","nasty","navel","nerve","nifty","night","ninety","noble","noisy","north","notch",
+"novel","nudge","nurse","nymph",
+"ocean","other","otter","ought","outer","oxide",
+"padre","paper","party","pasta","paste","patch","pause","peace","peach","pearl","pedal","penny",
+"perch","phase","phone","photo","piano","piece","pilot","pitch","pixel","pizza","place","plain",
+"plant","plate","plaza","plead","pleat","plump","plunge","poach","point","polar","posed","pound",
+"power","prank","press","price","pride","prime","prince","print","prize","probe","prove","prowl",
+"prune","psalm","punch","pupil","quack","qualm","queen","query","quest","queue","quick","quiet",
+"quota","quote",
+"rabbi","radar","radix","rainy","rally","ranch","range","rapid","reach","realm","rebel","refer",
+"reign","relax","repay","repel","reply","rerun","reset","reuse","rider","rifle","right","ripen",
+"risen","rival","river","robin","rocky","rouge","round","route","royal","rugby","ruler","rupee",
+"rusty","sadly","saint","sandy","sauce","scald","scale","scalp","scald","scalp","scalp","scamp",
+"scant","scare","scene","scone","scoop","scope","score","scorn","scout","screw","scrub","seize",
+"serve","seven","shade","shady","shaft","shake","shale","shame","shape","share","shark","sharp",
+"shave","sheen","sheer","sheet","shelf","shell","shift","shine","shiny","shire","shock","shore",
+"short","shout","shove","sight","silly","since","sinew","sixth","sixty","skill","skimp","skirt",
+"skunk","slang","slash","slate","sleep","slice","slide","slope","slosh","sloth","smart","smash",
+"smell","smelt","smile","smoke","snail","snake","solar","solid","solve","sorry","south","space",
+"spare","spark","speak","spear","spend","spice","spicy","spike","spine","spire","spite","split",
+"spoke","spray","squad","squat","squib","stack","staff","stage","stain","stair","stake","stale",
+"stall","stamp","stand","stare","start","state","stave","steal","steam","steel","steer","still",
+"stock","stomp","stone","stood","storm","story","stout","stove","straw","stray","strip","strive",
+"storey","stuck","study","stump","style","sugar","sunny","super","swear","sweat","sweet","swift",
+"swing","synth",
+"table","talon","tangy","tapir","taunt","tawny","teach","tense","there","thick","thief","thing",
+"think","third","thorn","three","threw","throw","thumb","tiger","tight","timer","tired","title",
+"today","token","tonal","total","touch","tough","towel","tower","toxic","trace","track","trade",
+"trail","train","trait","tramp","trash","tread","treat","trial","tribe","trick","tried","trite",
+"troll","troop","troth","trout","truck","truly","trunk","trust","truth","tulip","tumor","tuner",
+"tutti","twice","twirl","twist","tying","ultra","uncle","under","union","unity","until","unzip",
+"usage","usher","utter",
+"vague","valid","value","valve","video","vigor","viral","virus","visor","vista","vital","vivid",
+"vocal","voice","voter","vroom",
+"watch","water","weary","weave","wedge","weird","whale","wheat","wheel","where","which","while",
+"white","whole","whose","widen","wield","wight","windy","witch","witty","woman","women","world",
+"worry","worse","worst","worth","wound","wring","wrote",
+"xerox","yield","young","youth","zonal"
+];
+</script>
+</body>
+</html>
