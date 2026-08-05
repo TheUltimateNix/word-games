@@ -324,6 +324,13 @@
       <option value="5">5+</option>
     </select>
   </label>
+  <label>Starting letters amount
+    <select id="fLettersLen">
+      <option value="1" selected>1</option>
+      <option value="2">2</option>
+      <option value="3">3</option>
+    </select>
+  </label>
 </div>
 
 <div class="grid-wrapper">
@@ -544,6 +551,7 @@ function setStatus(msg, cls = '') {
 document.getElementById('solveBtn').addEventListener('click', async () => {
   if (!DICT) { setStatus('Dictionary still loading, please wait…', 'error'); return; }
   const board = getBoard();
+  const fLettersLen = +document.getElementById('fLettersLen').value;
   const minLen = +document.getElementById('minLen').value;
   const missing = board.filter(c => !c).length;
   if (missing > 0) { setStatus(`Board is incomplete — ${missing} cells empty.`, 'error'); return; }
@@ -561,38 +569,53 @@ document.getElementById('solveBtn').addEventListener('click', async () => {
     return;
   }
 
-  renderResults(words, minLen);
+  renderResults(words, minLen, fLettersLen);
   setStatus(`Found ${words.length} words. Good luck! 🎯`, 'done');
 });
 
-function renderResults(words, minLen) {
+function renderResults(words, minLen, prefixLen) {
   // Find max length
   const maxLen = Math.max(...words.map(w => w.length));
   const lengths = Array.from({length: maxLen - minLen + 1}, (_, i) => i + minLen);
 
-  // Build counts keyed by [startLetter][length]
-  const letters = 'abcdefghijklmnopqrstuvwxyz';
+  // Create set of words by first 1-3 letters
+  const fLetters = new Set();
+  const f2Letters = new Set();
+  const f3Letters = new Set();
+  for (const w of words) {
+    fLetters.add(w.slice(0, 1));
+    f2Letters.add(w.slice(0, 2));
+    f3Letters.add(w.slice(0, 3));
+  }
+
+  // Check Starting Letter Amount option
+  let activeSet;
+  if (prefixLen === 1) activeSet = fLetters;
+  else if (prefixLen === 2) activeSet = f2Letters;
+  else if (prefixLen === 3) activeSet = f3Letters;  
+
+  // Build counts keyed by starting letter sets and length
   const counts = {};
-  for (const l of letters) {
+  for (const l of activeSet) {
     counts[l] = {};
     for (const len of lengths) counts[l][len] = 0;
   }
 
   for (const w of words) {
-    const l = w[0];
+    const l = w.slice(0, prefixLen);
     if (counts[l] && counts[l][w.length] !== undefined) counts[l][w.length]++;
   }
 
   // Filter to letters that have at least one word
-  const usedLetters = letters.split('').filter(l => Object.values(counts[l]).some(v => v > 0));
+  const usedLetters = activeSet;
 
   // Column totals
   const colTotals = {};
-  for (const len of lengths) colTotals[len] = usedLetters.reduce((s, l) => s + (counts[l][len] || 0), 0);
+  for (const len of lengths) colTotals[len] = Array.from(usedLetters).reduce((s, l) => s + (counts[l][len] || 0), 0);
   const grandTotal = words.length;
 
   // Max count for highlighting
-  const allCounts = usedLetters.flatMap(l => lengths.map(len => counts[l][len]));
+  const allCounts = Array.from(usedLetters).flatMap(l => lengths.map(len => counts[l][len]));
   const maxCount = Math.max(...allCounts);
   const thresh = Math.max(3, Math.floor(maxCount * 0.6));
 
@@ -607,7 +630,7 @@ function renderResults(words, minLen) {
   let html = `
   <div class="summary-bar">
     <div class="summary-stat"><div class="val">${grandTotal}</div><div class="lbl">Total words</div></div>
-    <div class="summary-stat"><div class="val">${usedLetters.length}</div><div class="lbl">Starting letters</div></div>
+    <div class="summary-stat"><div class="val">${usedLetters.size}</div><div class="lbl">Starting letters</div></div>
     <div class="summary-stat"><div class="val">${longestWord.length}</div><div class="lbl">Longest (${longestWord.length} letters)</div></div>
     <div class="summary-stat"><div class="val">${words.filter(w=>w.length>=6).length}</div><div class="lbl">6+ letter words</div></div>
   </div>
