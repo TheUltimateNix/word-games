@@ -256,6 +256,39 @@
     border-radius: 4px;
   }
 
+  .cell-revealed {
+    background: rgba(78, 205, 196, 0.15);
+    color: var(--accent2);
+    border-radius: 4px;
+  }
+
+  .word-popup {
+    position: absolute;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    max-width: 300px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    z-index: 100;
+  }
+
+  .popup-header {
+    font-weight: 700;
+    color: var(--accent2);
+    margin-bottom: 0.5rem;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+  }
+
+  .popup-words {
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    line-height: 1.6;
+  }
+
   tfoot td {
     padding: 0.5rem 0.6rem;
     text-align: center;
@@ -411,6 +444,9 @@ function trieIsWord(word) {
 
 // ─── Board UI ────────────────────────────────────────────────────────────────
 let gridSize = 8;
+
+// Store valid words to each cell
+let wordLists = {};
 
 function buildGrid() {
   const board = document.getElementById('board');
@@ -573,6 +609,64 @@ document.getElementById('solveBtn').addEventListener('click', async () => {
   setStatus(`Found ${words.length} words. Good luck! 🎯`, 'done');
 });
 
+// Show word popup for clicked cell
+function showWordPopup(cell, prefix, len, cellWords) {
+  // Remove any existing popup
+  document.querySelector('.word-popup')?.remove();
+
+  // Create popup element
+  const popup = document.createElement('div');
+  popup.className = 'word-popup';
+  popup.innerHTML = `
+    <div class="popup-header">${prefix.toUpperCase()} · ${len} letters</div>
+    <div class="popup-words">${cellWords.map(w => w.toUpperCase()).join(', ')}</div>
+  `;
+  
+  // Position it below the clicked cell
+  document.body.appendChild(popup);
+  const rect = cell.getBoundingClientRect();
+  popup.style.left = `${rect.left + window.scrollX}px`;
+  popup.style.top = `${rect.bottom + window.scrollY + 6}px`;
+
+  // Close when clicking outside
+  setTimeout(() => {
+    document.addEventListener('click', e => {
+      if (!popup.contains(e.target)) popup.remove();
+    }, {once: true});
+  }, 0);
+}
+
+// Reaveal words on cell click
+document.getElementById('results').addEventListener('click', e => {
+  const cell = e.target.closest('.cell-clickable');
+  if (!cell) return;
+
+  const prefix = cell.dataset.prefix;
+  const len = cell.dataset.len === '9+' ? '9+' : +cell.dataset.len;
+  const cellWords = wordLists[prefix][len] || [];
+
+  // Show Popup
+  showWordPopup(cell, prefix, len, cellWords);
+
+  // Highlight cell
+  cell.classList.add('cell-revealed');
+});
+
+// Unhighlight cell on hold click
+document.getElementById('results').addEventListener('mousedown', e => {
+  const cell = e.target.closest('.cell-clickable');
+  if (!cell) return;
+  let held = false;
+  let timer = setTimeout(() => {
+    held = true;
+    cell.classList.remove('cell-revealed');
+  }, 500);
+  document.addEventListener('mouseup', () => clearTimeout(timer), {once:true});
+  cell.addEventListener('click', e => {
+    if (held) e.stopPropagation();
+  }, {once: true});
+});
+
 function renderResults(words, minLen, prefixLen) {
   // Find max length
   const maxLen = Math.max(...words.map(w => w.length));
@@ -601,9 +695,20 @@ function renderResults(words, minLen, prefixLen) {
     for (const len of lengths) counts[l][len] = 0;
   }
 
+  // Store valid words to each cell
+  wordLists = {};
+  for (const l of activeSet) {
+    wordLists[l] = {};
+    for (const len of lengths) wordLists[l][len] = [];
+  }
+
+  // Count words
   for (const w of words) {
     const l = w.slice(0, prefixLen);
-    if (counts[l] && counts[l][w.length] !== undefined) counts[l][w.length]++;
+    if (counts[l] && counts[l][w.length] !== undefined) {
+      counts[l][w.length]++;
+      wordLists[l][w.length].push(w);
+    }
   }
 
   // Filter to letters that have at least one word
@@ -653,12 +758,14 @@ function renderResults(words, minLen, prefixLen) {
     for (const len of showLengths) {
       const v = counts[l][len] || 0;
       if (v === 0) html += `<td class="cell-zero">—</td>`;
-      else if (v >= thresh) html += `<td class="cell-high">${v}</td>`;
-      else html += `<td class="cell-num">${v}</td>`;
+      else if (v >= thresh) html += `<td class="cell-high cell-clickable" data-prefix="${l}" data-len="${len}">${v}</td>`;
+      else html += `<td class="cell-num cell-clickable" data-prefix="${l}" data-len="${len}">${v}</td>`;
     }
     if (hasLong) {
       const longCount = lengths.filter(len=>len>8).reduce((s,len)=>s+(counts[l][len]||0),0);
-      html += longCount ? `<td class="cell-num">${longCount}</td>` : `<td class="cell-zero">—</td>`;
+      const longWords = lengths.filter(len=>len>8).flatMap(len => wordLists[l][len] || []);
+      wordLists[l]['9+'] = longWords;
+      html += longCount ? `<td class="cell-num cell-clickable" data-prefix="${l}" data-len="9+">${longCount}</td>` : `<td class="cell-zero">—</td>`;
     }
     html += `<td class="cell-num" style="color:var(--accent2)">${rowTotal}</td></tr>`;
   }
