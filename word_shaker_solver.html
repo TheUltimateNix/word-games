@@ -164,6 +164,18 @@
     margin-bottom: 1.5rem;
   }
 
+  #quToggle {
+    background: var(--surface);
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+
+  #quToggle.active {
+    background: linear-gradient(135deg, var(--accent), #9b8df7);
+    color: #fff;
+    border: none;
+  }
+
   #status {
     text-align: center;
     font-size: 0.85rem;
@@ -364,6 +376,7 @@
       <option value="3">3</option>
     </select>
   </label>
+  <button id="quToggle" class="active" title="Toggle Q tiles to be treated as QU when solving">Q = QU</button>
 </div>
 
 <div class="grid-wrapper">
@@ -445,6 +458,9 @@ function trieIsWord(word) {
 // ─── Board UI ────────────────────────────────────────────────────────────────
 let gridSize = 8;
 
+// Q tile toggle
+let quMode = true;
+
 // Store valid words to each cell
 let wordLists = {};
 
@@ -512,6 +528,11 @@ document.getElementById('pasteBtn').addEventListener('click', () => {
   });
 });
 
+document.getElementById('quToggle').addEventListener('click', () => {
+  quMode = !quMode;
+  document.getElementById('quToggle').classList.toggle('active');
+});
+
 // ─── Solver ──────────────────────────────────────────────────────────────────
 function getBoard() {
   return Array.from(document.querySelectorAll('#board input')).map(i => i.value.toLowerCase());
@@ -533,9 +554,15 @@ function solve(board, size, minLen) {
   const NEIGH = Array.from({length: size*size}, (_, i) => neighbours(i, size));
 
   function dfs(idx, path, word, node) {
-    const ch = board[idx];
-    if (!node[ch]) return;
-    const newNode = node[ch];
+    const ch = (board[idx] === 'q' && quMode) ? 'qu' : board[idx];
+    
+    // Walk trie - handle 'qu' as two steps
+    let newNode = node;
+    for (const letter of ch) {
+      if (!newNode[letter]) return;
+      newNode = newNode[letter];
+    }
+
     const newWord = word + ch;
     const newPath = path | (1 << idx);
 
@@ -554,9 +581,15 @@ function solve(board, size, minLen) {
   const useBigInt = size * size > 30;
 
   function dfsB(idx, path, word, node) {
-    const ch = board[idx];
-    if (!node[ch]) return;
-    const newNode = node[ch];
+    const ch = (board[idx] === 'q' && quMode) ? 'qu' : board[idx];
+
+    // Walk trie - handle 'qu' as two steps
+    let newNode = node;
+    for (const letter of ch) {
+      if (!newNode[letter]) return;
+      newNode = newNode[letter];
+    }
+
     const newWord = word + ch;
     const newPath = path | (1n << BigInt(idx));
 
