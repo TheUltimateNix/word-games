@@ -30,6 +30,32 @@
     padding: 2rem 1rem;
   }
 
+  .tab-bar {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .tab-btn {
+    background: var(--surface);
+    color: var(--muted);
+    border: 1px solid var(--border);
+    padding: 0.5rem 1.5rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+  }
+
+  .tab-btn.active {
+    background: linear-gradient(135deg, var(--accent), #9b8df7);
+    color: #fff;
+    border: none;
+  }
+
+  .hidden {
+    display: none;
+  }
+
   header {
     text-align: center;
     margin-bottom: 2.5rem;
@@ -342,6 +368,116 @@
     font-size: 0.75rem;
     color: #3a3d55;
   }
+
+  /* Dictionary Tab */
+
+  .dict-sticky {
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    padding: 1rem 0;
+    z-index: 10;
+    max-width: 860px;
+    margin: 0 auto;
+  }
+
+  .dict-input-row {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .dict-input-row input {
+    flex: 1;
+    background: var(--tile-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.95rem;
+    padding: 0.5rem 0.75rem;
+    outline: none;
+  }
+
+  .dict-input-row input:focus {
+    border-color: var(--accent);
+  }
+
+  .dict-toggle-row {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .dict-action-row {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .dict-mode-btn {
+    background: var(--surface);
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.4rem 1rem;
+    font-size: 0.85rem;
+  }
+
+  .dict-mode-btn.active {
+    background: linear-gradient(135deg, var(--accent), #9b8df7);
+    color: #fff;
+    border: none;
+  }
+
+  #dict-list {
+    max-width: 860px;
+    margin: 0 auto;
+    padding-bottom: 2rem;
+  }
+
+  .dict-length-group {
+    margin-bottom: 1.5rem;
+  }
+
+  .dict-length-header {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.3rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .dict-word-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .dict-word {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.82rem;
+    padding: 0.3rem 0.6rem;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+  }
+
+  .dict-word.valid {
+    color: #4ecdc4;
+    border-color: rgba(78,205,196,0.3);
+    background: rgba(78,205,196,0.08);
+  }
+
+  .dict-word.invalid {
+    color: #f97068;
+    border-color: rgba(249,112,104,0.3);
+    background: rgba(249,112,104,0.08);
+  }
 </style>
 </head>
 <body>
@@ -349,52 +485,81 @@
 <header>
   <h1>Word Shaker Solver</h1>
   <p>Enter your board — get word counts by letter &amp; length, not the answers</p>
+  <p id="dictProfile" style="font-size:0.75rem; color:var(--accent2); margin-top:0.3rem;"></p>
 </header>
 
-<div class="controls">
-  <label>Grid size
-    <select id="sizeSelect">
-      <option value="4">4 × 4</option>
-      <option value="5">5 × 5</option>
-      <option value="6">6 × 6</option>
-      <option value="7">7 × 7</option>
-      <option value="8" selected>8 × 8</option>
-    </select>
-  </label>
-  <label>Min word length
-    <select id="minLen">
-      <option value="2">2+</option>
-      <option value="3" selected>3+</option>
-      <option value="4">4+</option>
-      <option value="5">5+</option>
-    </select>
-  </label>
-  <label>Starting letters amount
-    <select id="fLettersLen">
-      <option value="1" selected>1</option>
-      <option value="2">2</option>
-      <option value="3">3</option>
-    </select>
-  </label>
-  <button id="quToggle" class="active" title="Toggle Q tiles to be treated as QU when solving">Q = QU</button>
+<div class="tab-bar">
+  <button class="tab-btn active" data-tab="solver">Solver</button>
+  <button class="tab-btn" data-tab="dictionary">Dictionary</button>
 </div>
 
-<div class="grid-wrapper">
-  <div id="board"></div>
+<div class="tab-panel" id="tab-solver">
+  <div class="controls">
+    <label>Grid size
+      <select id="sizeSelect">
+        <option value="4">4 × 4</option>
+        <option value="5">5 × 5</option>
+        <option value="6">6 × 6</option>
+        <option value="7">7 × 7</option>
+        <option value="8" selected>8 × 8</option>
+      </select>
+    </label>
+    <label>Min word length
+      <select id="minLen">
+        <option value="2">2+</option>
+        <option value="3" selected>3+</option>
+        <option value="4">4+</option>
+        <option value="5">5+</option>
+      </select>
+    </label>
+    <label>Starting letters amount
+      <select id="fLettersLen">
+        <option value="1" selected>1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+      </select>
+    </label>
+    <button id="quToggle" class="active" title="Toggle Q tiles to be treated as QU when solving">Q = QU</button>
+  </div>
+
+  <div class="grid-wrapper">
+    <div id="board"></div>
+  </div>
+
+  <div class="btn-row">
+    <button id="pasteBtn" title="Paste 64 letters (left-to-right, top-to-bottom)">⌨ Paste letters</button>
+    <button id="solveBtn">▶ Solve</button>
+    <button id="clearBtn">✕ Clear</button>
+  </div>
+
+  <div class="paste-hint">Tip: click "Paste letters" and type/paste your board letters in one go (left→right, top→bottom, spaces optional)</div>
+
+  <div id="status"></div>
+  <div id="results"></div>
+
+  <footer>Word Shaker Solver · runs entirely in your browser · no data sent anywhere</footer>
 </div>
 
-<div class="btn-row">
-  <button id="pasteBtn" title="Paste 64 letters (left-to-right, top-to-bottom)">⌨ Paste letters</button>
-  <button id="solveBtn">▶ Solve</button>
-  <button id="clearBtn">✕ Clear</button>
+<div class="tab-panel hidden" id="tab-dictionary">
+  <div class="dict-sticky">
+    <div class="dict-input-row">
+      <input type="text" id="dictInput" placeholder="Type a word to add..." autocomplete="off" spellcheck="false">
+      <button id="dictAddBtn">Add</button>
+    </div>
+    <div class="dict-toggle-row">
+      <button class="dict-mode-btn active" data-mode="validate" title="Click a word to make it valid">✓ Validate</button>
+      <button class="dict-mode-btn" data-mode="invalidate" title="Click a word to make it invalid">✕ Invalidate</button>
+      <button class="dict-mode-btn" data-mode="hide" title="Click a word to hide it from the list">○ Hide</button>
+    </div>
+    <div class="dict-action-row">
+      <button id="dictClearBtn">Clear List</button>
+      <button id="dictExportBtn">⬇ Export</button>
+      <button id="dictImportBtn">⬆ Import</button>
+    </div>
+  </div>
+
+  <div id="dict-list"></div>
 </div>
-
-<div class="paste-hint">Tip: click "Paste letters" and type/paste your board letters in one go (left→right, top→bottom, spaces optional)</div>
-
-<div id="status"></div>
-<div id="results"></div>
-
-<footer>Word Shaker Solver · runs entirely in your browser · no data sent anywhere</footer>
 
 <script>
 // ─── Dictionary ──────────────────────────────────────────────────────────────
@@ -504,6 +669,20 @@ function onTileKey(e) {
   if (e.key === 'ArrowUp')    { const n = inp.parentElement.querySelector(`[data-idx="${idx-gridSize}"]`); if(n) n.focus(); }
 }
 
+// ─── Event Listeners ───────────────────────────────────────────────────────────
+// Tab switching
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+    btn.classList.add('active');
+    document.getElementById(`tab-${btn.dataset.tab}`).classList.remove('hidden');
+  });
+});
+
+
+// Solver Event Listeners
+// Grid size select
 document.getElementById('sizeSelect').addEventListener('change', e => {
   gridSize = +e.target.value;
   buildGrid();
@@ -511,12 +690,14 @@ document.getElementById('sizeSelect').addEventListener('change', e => {
   setStatus('');
 });
 
+// Board clear
 document.getElementById('clearBtn').addEventListener('click', () => {
   document.querySelectorAll('#board input').forEach(i => { i.value = ''; i.classList.remove('filled'); });
   document.getElementById('results').innerHTML = '';
   setStatus('');
 });
 
+// Board paste
 document.getElementById('pasteBtn').addEventListener('click', () => {
   const raw = prompt(`Paste your ${gridSize*gridSize} board letters (spaces/commas ignored, left→right top→bottom):`);
   if (!raw) return;
@@ -528,10 +709,196 @@ document.getElementById('pasteBtn').addEventListener('click', () => {
   });
 });
 
+// Q toggle
 document.getElementById('quToggle').addEventListener('click', () => {
   quMode = !quMode;
   document.getElementById('quToggle').classList.toggle('active');
 });
+
+// Dictionary Event Listeners
+// Mode button switching
+document.querySelectorAll('.dict-mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.dict-mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    dictMode = btn.dataset.mode;
+  });
+});
+
+// Word input bar
+document.getElementById('dictAddBtn').addEventListener('click', () => {
+  const input = document.getElementById('dictInput');
+  dictAddWord(input.value);
+  input.value = '';
+  input.focus();
+});
+
+document.getElementById('dictInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('dictAddBtn').click();
+});
+
+// Click words in the list
+document.getElementById('dict-list').addEventListener('click', e => {
+  const word = e.target.dataset.word;
+  if (!word) return;
+  if (e.shiftKey) {
+    dictWords[word] = 'hidden';
+  } else if (dictMode === 'validate') {
+    dictWords[word] = 'valid';
+    customValid.add(word);
+    customInvalid.delete(word);
+  } else if (dictMode === 'invalidate') {
+    dictWords[word] = 'invalid';
+    customInvalid.add(word);
+    customValid.delete(word);
+  } else if (dictMode === 'hide') {
+    dictWords[word] = 'hidden';
+  }
+  saveDictData();
+  renderDictList();
+});
+
+// Right click to invalidate
+document.getElementById('dict-list').addEventListener('contextmenu', e => {
+  e.preventDefault();
+  const word = e.target.dataset.word;
+  if (!word) return;
+  dictWords[word] = 'invalid';
+  customInvalid.add(word);
+  customValid.delete(word);
+  saveDictData();
+  renderDictList();
+});
+
+// Clear button
+document.getElementById('dictClearBtn').addEventListener('click', () => {
+  for (const word of Object.keys(dictWords)) dictWords[word] = 'hidden';
+  saveDictData();
+  renderDictList();
+});
+
+// Export dictionary
+document.getElementById('dictExportBtn').addEventListener('click', () => {
+  const lines = [
+    '# Word Shaker Custom Dictionary',
+    '# Lines starting with + are valid, - are invalid',
+    '',
+    ...([...customValid].sort().map(w => `+${w}`)),
+    ...([...customInvalid].sort().map(w => `-${w}`))
+  ];
+  const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'wordshaker-dictionary.txt';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+// Import dictionary
+document.getElementById('dictImportBtn').addEventListener('click', () => {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.txt';
+  input.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const lines = ev.target.result.split('\n');
+      customValid.clear();
+      customInvalid.clear();
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed.startsWith('+')) customValid.add(trimmed.slice(1));
+        if (trimmed.startsWith('-')) customInvalid.add(trimmed.slice(1));
+      }
+      // Update dictWords to match
+      for (const w of customValid) {
+        dictWords[w] = 'valid';
+      }
+      for (const w of customInvalid) {
+        dictWords[w] = 'invalid';
+      }
+      saveDictData();
+      renderDictList();
+      document.getElementById('dictProfile').textContent = `📖 ${file.name}`;
+    };
+    reader.readAsText(file);
+  });
+  input.click();
+});
+
+// ─── Dictionary Editor ───────────────────────────────────────────────────────
+let dictWords = {}; // { word: 'valid' | 'invalid' | 'hidden' }
+let dictMode = 'validate';
+let customValid = new Set(); // words added as valid
+let customInvalid = new Set(); // words forced invalid
+
+// Load from localStorage
+function loadDictData() {
+  try {
+    const saved = localStorage.getItem('wordshaker-dict');
+    if (saved) dictWords = JSON.parse(saved);
+    const cv = localStorage.getItem('wordshaker-custom-valid');
+    if (cv) customValid = new Set(JSON.parse(cv));
+    const ci = localStorage.getItem('wordshaker-custom-invalid');
+    if (ci) customInvalid = new Set(JSON.parse(ci));
+  } catch(e) {}
+}
+
+// Save to localStorage
+function saveDictData() {
+  localStorage.setItem('wordshaker-dict', JSON.stringify(dictWords));
+  localStorage.setItem('wordshaker-custom-valid', JSON.stringify([...customValid]));
+  localStorage.setItem('wordshaker-custom-invalid', JSON.stringify([...customInvalid]));
+}
+
+// Add a word to the dict list
+function dictAddWord(word, skipRender = false) {
+  word = word.toLowerCase().trim();
+  if (!word || word.length < 2) return;
+  if (dictWords[word] === undefined) {
+    dictWords[word] = trieIsWord(word) ? 'valid' : 'invalid';
+  }
+  saveDictData();
+  if (!skipRender) renderDictList();
+}
+
+// Render the word list grouped by length
+function renderDictList() {
+  const visible = Object.entries(dictWords).filter(([w, s]) => s !== 'hidden');
+  if (!visible.length) {
+    document.getElementById('dict-list').innerHTML = '<p style="text-align:center;color:var(--muted);margin-top:2rem;">No words yet — type a word above or solve a board!</p>';
+    return;
+  }
+
+  // Group by length
+  const groups = {};
+  for (const [word, status] of visible) {
+    const len = word.length;
+    if (!groups[len]) groups[len] = [];
+    groups[len].push({ word, status });
+  }
+
+  // Sort each group alphabetically
+  for (const len of Object.keys(groups)) {
+    groups[len].sort((a, b) => a.word.localeCompare(b.word));
+  }
+
+  // Build HTML
+  let html = '';
+  for (const len of Object.keys(groups).sort((a,b) => +a - +b)) {
+    html += `<div class="dict-length-group">
+      <div class="dict-length-header">${len} letter words (${groups[len].length})</div>
+      <div class="dict-word-list">`;
+        for (const { word, status } of groups[len]) {
+          html += `<span class="dict-word ${status}" data-word="${word}">${word.toUpperCase()}</span>`;
+        }
+        html += `</div></div>`;
+  }
+  document.getElementById('dict-list').innerHTML = html;
+}
 
 // ─── Solver ──────────────────────────────────────────────────────────────────
 function getBoard() {
@@ -639,6 +1006,13 @@ document.getElementById('solveBtn').addEventListener('click', async () => {
   }
 
   renderResults(words, minLen, fLettersLen);
+
+  // Show solved board word results in dictionary list
+  for (const w of words) {
+    dictAddWord(w, true);
+  }
+  renderDictList();
+
   setStatus(`Found ${words.length} words. Good luck! 🎯`, 'done');
 });
 

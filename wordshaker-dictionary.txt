@@ -1,0 +1,4 @@
+# Word Shaker Custom Dictionary
+# Lines starting with + are valid, - are invalid
+
+-ute
