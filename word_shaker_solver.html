@@ -77,6 +77,19 @@
     font-size: 0.9rem;
   }
 
+  #dictToggle {
+    background: var(--surface);
+    color: var(--muted);
+    border: 1px solid var(--border);
+    margin-top: 0.5rem;
+  }
+
+  #dictToggle.active {
+    background: linear-gradient(135deg, var(--accent2), #3ab5ad);
+    color: #fff;
+    border: none;
+  }
+
   .controls {
     display: flex;
     justify-content: center;
@@ -486,6 +499,7 @@
   <h1>Word Shaker Solver</h1>
   <p>Enter your board — get word counts by letter &amp; length, not the answers</p>
   <p id="dictProfile" style="font-size:0.75rem; color:var(--accent2); margin-top:0.3rem;"></p>
+  <button id="dictToggle" title="Switch between Default and Custom Word Shaker dictionary (leave alone if you use your own dictionary)">📖 Default Dict</button>
 </header>
 
 <div class="tab-bar">
@@ -669,6 +683,12 @@ function onTileKey(e) {
   if (e.key === 'ArrowUp')    { const n = inp.parentElement.querySelector(`[data-idx="${idx-gridSize}"]`); if(n) n.focus(); }
 }
 
+let usingWsDict = false;
+let dictWords = {}; // { word: 'valid' | 'invalid' | 'hidden' }
+let dictMode = 'validate';
+let customValid = new Set(); // words added as valid
+let customInvalid = new Set(); // words forced invalid
+
 // ─── Event Listeners ───────────────────────────────────────────────────────────
 // Tab switching
 document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -680,6 +700,50 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
   });
 });
 
+// Dictionary toggle
+document.getElementById('dictToggle').addEventListener('click', async () => {
+  usingWsDict = !usingWsDict;
+  const btn = document.getElementById('dictToggle');
+  if (usingWsDict) {
+      btn.textContent = '📖 WS Dict';
+      btn.classList.add('active');
+      await loadWsDict();
+      renderDictList();
+      localStorage.setItem('wordshaker-using-ws-dict', 'true');
+    } else {
+      btn.textContent = '📖 Default Dict';
+      btn.classList.remove('active');
+      customValid.clear();
+      customInvalid.clear();
+      buildTrie(DICT);
+      saveDictData();
+      for (const w of Object.keys(dictWords)) {
+        if (dictWords[w] !== 'hidden') {
+          dictWords[w] = trieIsWord(w) ? 'valid' : 'invalid';
+        }
+      }
+      renderDictList();
+      localStorage.setItem('wordshaker-using-ws-dict', 'false');
+    }
+});
+
+async function loadDictData() {
+  try {
+    const saved = localStorage.getItem('wordshaker-dict');
+    if (saved) dictWords = JSON.parse(saved);
+    const cv = localStorage.getItem('wordshaker-custom-valid');
+    if (cv) customValid = new Set(JSON.parse(cv));
+    const ci = localStorage.getItem('wordshaker-custom-invalid');
+    if (ci) customInvalid = new Set(JSON.parse(ci));
+    const wsDict = localStorage.getItem('wordshaker-using-ws-dict');
+    if (wsDict === 'true') {
+      usingWsDict = true;
+      document.getElementById('dictToggle').textContent = '📖 WS Dict';
+      document.getElementById('dictToggle').classList.add('active');
+      await loadWsDict();
+    }
+  } catch(e) {}
+}
 
 // Solver Event Listeners
 // Grid size select
@@ -747,6 +811,7 @@ document.getElementById('dict-list').addEventListener('click', e => {
     dictWords[word] = 'valid';
     customValid.add(word);
     customInvalid.delete(word);
+    addWordToTrie(word);
   } else if (dictMode === 'invalidate') {
     dictWords[word] = 'invalid';
     customInvalid.add(word);
@@ -830,23 +895,6 @@ document.getElementById('dictImportBtn').addEventListener('click', () => {
 });
 
 // ─── Dictionary Editor ───────────────────────────────────────────────────────
-let dictWords = {}; // { word: 'valid' | 'invalid' | 'hidden' }
-let dictMode = 'validate';
-let customValid = new Set(); // words added as valid
-let customInvalid = new Set(); // words forced invalid
-
-// Load from localStorage
-function loadDictData() {
-  try {
-    const saved = localStorage.getItem('wordshaker-dict');
-    if (saved) dictWords = JSON.parse(saved);
-    const cv = localStorage.getItem('wordshaker-custom-valid');
-    if (cv) customValid = new Set(JSON.parse(cv));
-    const ci = localStorage.getItem('wordshaker-custom-invalid');
-    if (ci) customInvalid = new Set(JSON.parse(ci));
-  } catch(e) {}
-}
-
 // Save to localStorage
 function saveDictData() {
   localStorage.setItem('wordshaker-dict', JSON.stringify(dictWords));
@@ -858,11 +906,21 @@ function saveDictData() {
 function dictAddWord(word, skipRender = false) {
   word = word.toLowerCase().trim();
   if (!word || word.length < 2) return;
-  if (dictWords[word] === undefined) {
+  if (dictWords[word] === undefined || dictWords[word] === 'hidden') {
     dictWords[word] = trieIsWord(word) ? 'valid' : 'invalid';
   }
   saveDictData();
   if (!skipRender) renderDictList();
+}
+
+// Add a word to the trie
+function addWordToTrie(word) {
+  let node = DICT_TRIE;
+  for (const ch of word) {
+    if (!node[ch]) node[ch] = Object.create(null);
+    node = node[ch];
+  }
+  node.$ = true;
 }
 
 // Render the word list grouped by length
@@ -898,6 +956,37 @@ function renderDictList() {
         html += `</div></div>`;
   }
   document.getElementById('dict-list').innerHTML = html;
+}
+
+// Load my custom Word Shaker dictionary
+async function loadWsDict() {
+  try {
+    const r = await fetch('./wordshaker-dictionary.txt');
+    const text = await r.text();
+    customValid.clear();
+    customInvalid.clear();
+    for (const line of text.split('\n')) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('+')) customValid.add(trimmed.slice(1));
+      if (trimmed.startsWith('-')) customInvalid.add(trimmed.slice(1));
+    }
+    
+    for (const w of customValid) addWordToTrie(w);
+
+    // Update dictWords to reflect new statuses
+    for (const w of customValid) {
+      if (dictWords[w] !== undefined) dictWords[w] = 'valid';
+    }
+    for (const w of customInvalid) {
+      if (dictWords[w] !== undefined) dictWords[w] = 'invalid';
+    }
+    renderDictList();
+    saveDictData();
+  } catch(e) {
+    setStatus('Could not load Word Shaker dictionary!', 'error');
+    usingWsDict = false;
+    document.getElementById('dictToggle').classList.remove('active');
+  }
 }
 
 // ─── Solver ──────────────────────────────────────────────────────────────────
@@ -1000,15 +1089,19 @@ document.getElementById('solveBtn').addEventListener('click', async () => {
 
   const words = solve(board, gridSize, minLen);
 
-  if (!words.length) {
+  // Apply custom dictionary
+  const filteredWords = words
+    .filter(w => !customInvalid.has(w));
+
+  if (!filteredWords.length) {
     setStatus('No words found. Check your board is filled in correctly.', 'error');
     return;
   }
 
-  renderResults(words, minLen, fLettersLen);
+  renderResults(filteredWords, minLen, fLettersLen);
 
   // Show solved board word results in dictionary list
-  for (const w of words) {
+  for (const w of filteredWords) {
     dictAddWord(w, true);
   }
   renderDictList();
@@ -1192,7 +1285,10 @@ function renderResults(words, minLen, prefixLen) {
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 buildGrid();
-loadDictionary();
+(async () => {
+  await loadDictionary();
+  await loadDictData();
+})();
 
 // ─── Fallback word list (used offline) ───────────────────────────────────────
 const FALLBACK_WORDS = [

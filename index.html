@@ -1,618 +1,114 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>My Dictionary</title>
-  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>xiNix Word Games</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
 
-    :root {
-      --bg: #f5f2eb;
-      --surface: #ffffff;
-      --surface2: #eeeae0;
-      --ink: #1a1814;
-      --ink2: #6b6760;
-      --ink3: #a09d97;
-      --accent: #c8440f;
-      --accent-bg: #fdf0eb;
-      --border: rgba(26,24,20,0.12);
-      --border2: rgba(26,24,20,0.07);
-      --green: #2d6a4f;
-      --green-bg: #eaf4ee;
-      --red: #a32d2d;
-      --red-bg: #fdf0f0;
-      --radius: 10px;
-      --radius-lg: 16px;
-    }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    body {
-      font-family: 'DM Sans', sans-serif;
-      background: var(--bg);
-      color: var(--ink);
-      min-height: 100vh;
-      padding: 2rem 1rem 4rem;
-    }
+  :root {
+    --bg:        #0f1117;
+    --surface:   #1a1d27;
+    --border:    #2a2d3a;
+    --accent:    #7c6af7;
+    --accent2:   #4ecdc4;
+    --text:      #e8e9f0;
+    --muted:     #6b6f84;
+    --tile-bg:   #22253a;
+    --tile-hover:#2d3150;
+    --tile-active:#7c6af7;
+  }
 
-    header {
-      max-width: 680px;
-      margin: 0 auto 2.5rem;
-    }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+  }
 
-    header h1 {
-      font-family: 'Lora', serif;
-      font-size: clamp(2rem, 5vw, 3rem);
-      font-weight: 600;
-      letter-spacing: -0.02em;
-      line-height: 1.1;
-      margin-bottom: 0.4rem;
-    }
+  header {
+    text-align: center;
+    margin-bottom: 3rem
+  }
 
-    header h1 span {
-      color: var(--accent);
-      font-style: italic;
-    }
+  header h1 {
+    font-size: clamp(1.6rem, 4vw, 2.4rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
 
-    header p {
-      font-size: 14px;
-      color: var(--ink2);
-      font-weight: 300;
-    }
+  main {
+    max-width: 600px;
+    margin: 0 auto;
+  }
 
-    .main {
-      max-width: 680px;
-      margin: 0 auto;
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
-    }
+  main > div {
+    margin-bottom: 2.5rem;
+  }
 
-    /* Search */
-    .search-box {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 6px 6px 6px 18px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      transition: box-shadow 0.15s;
-    }
+  h2 {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+  }
 
-    .search-box:focus-within {
-      box-shadow: 0 0 0 3px rgba(200,68,15,0.15);
-      border-color: var(--accent);
-    }
+  a {
+    display: block;
+    padding: 0.75rem 1rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    text-decoration: none;
+    font-weight: 500;
+    transition: border-color 0.15s, background 0.15s;
+    margin-bottom: 0.5rem;
+  }
 
-    .search-box input {
-      flex: 1;
-      border: none;
-      outline: none;
-      font-family: 'Lora', serif;
-      font-size: 1.1rem;
-      background: transparent;
-      color: var(--ink);
-    }
+  a:hover {
+    border-color: var(--accent);
+    background: var(--tile-hover);
+    color: var(--accent);
+  }
 
-    .search-box input::placeholder { color: var(--ink3); font-style: italic; }
-
-    .search-box button {
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      border-radius: 10px;
-      padding: 10px 20px;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: opacity 0.15s, transform 0.1s;
-      white-space: nowrap;
-    }
-
-    .search-box button:hover { opacity: 0.88; }
-    .search-box button:active { transform: scale(0.97); }
-
-    /* Tabs */
-    .tabs {
-      display: flex;
-      gap: 4px;
-      background: var(--surface2);
-      border-radius: var(--radius);
-      padding: 4px;
-    }
-
-    .tab {
-      flex: 1;
-      padding: 8px;
-      border: none;
-      background: transparent;
-      border-radius: 7px;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--ink2);
-      cursor: pointer;
-      transition: background 0.15s, color 0.15s;
-    }
-
-    .tab.active {
-      background: var(--surface);
-      color: var(--ink);
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-    }
-
-    /* Cards */
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 1.5rem;
-    }
-
-    /* Result */
-    .result-word {
-      display: flex;
-      align-items: baseline;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-bottom: 1rem;
-      padding-bottom: 1rem;
-      border-bottom: 1px solid var(--border2);
-    }
-
-    .result-word h2 {
-      font-family: 'Lora', serif;
-      font-size: 1.8rem;
-      font-weight: 600;
-      letter-spacing: -0.02em;
-    }
-
-    .phonetic {
-      font-family: 'DM Mono', monospace;
-      font-size: 13px;
-      color: var(--ink2);
-    }
-
-    .source-badge {
-      font-size: 11px;
-      padding: 3px 9px;
-      border-radius: 99px;
-      font-weight: 500;
-      margin-left: auto;
-    }
-
-    .source-custom { background: var(--accent-bg); color: var(--accent); }
-    .source-api { background: var(--green-bg); color: var(--green); }
-
-    .meaning-block { margin-bottom: 1.25rem; }
-    .meaning-block:last-child { margin-bottom: 0; }
-
-    .pos {
-      font-family: 'DM Mono', monospace;
-      font-size: 11px;
-      font-weight: 500;
-      color: var(--accent);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      margin-bottom: 0.6rem;
-    }
-
-    .def-list { list-style: none; }
-
-    .def-item {
-      display: flex;
-      gap: 10px;
-      padding: 6px 0;
-      border-bottom: 1px solid var(--border2);
-      font-size: 15px;
-      line-height: 1.6;
-    }
-
-    .def-item:last-child { border-bottom: none; }
-
-    .def-num {
-      font-family: 'DM Mono', monospace;
-      font-size: 11px;
-      color: var(--ink3);
-      min-width: 16px;
-      padding-top: 4px;
-    }
-
-    .def-example {
-      font-family: 'Lora', serif;
-      font-style: italic;
-      font-size: 13px;
-      color: var(--ink2);
-      margin-top: 3px;
-    }
-
-    /* Status banners */
-    .banner {
-      padding: 12px 16px;
-      border-radius: var(--radius);
-      font-size: 14px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .banner-loading { background: var(--surface2); color: var(--ink2); }
-    .banner-error { background: var(--red-bg); color: var(--red); }
-    .banner-empty { text-align: center; padding: 2.5rem 1rem; color: var(--ink3); font-size: 14px; font-family: 'Lora', serif; font-style: italic; }
-
-    /* Add word form */
-    .form-grid {
-      display: grid;
-      gap: 12px;
-    }
-
-    .field label {
-      display: block;
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--ink2);
-      margin-bottom: 5px;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    .field input,
-    .field select,
-    .field textarea {
-      width: 100%;
-      padding: 10px 14px;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      font-family: 'DM Sans', sans-serif;
-      font-size: 14px;
-      background: var(--bg);
-      color: var(--ink);
-      outline: none;
-      transition: border-color 0.15s, box-shadow 0.15s;
-    }
-
-    .field input:focus,
-    .field select:focus,
-    .field textarea:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(200,68,15,0.1);
-    }
-
-    .field textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
-
-    .btn-primary {
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      border-radius: var(--radius);
-      padding: 11px 24px;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: opacity 0.15s;
-    }
-
-    .btn-primary:hover { opacity: 0.88; }
-
-    .btn-danger {
-      background: transparent;
-      color: var(--red);
-      border: 1px solid rgba(163,45,45,0.3);
-      border-radius: var(--radius);
-      padding: 6px 12px;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 12px;
-      cursor: pointer;
-      transition: background 0.15s;
-    }
-
-    .btn-danger:hover { background: var(--red-bg); }
-
-    .success-msg {
-      background: var(--green-bg);
-      color: var(--green);
-      padding: 10px 14px;
-      border-radius: var(--radius);
-      font-size: 13px;
-      margin-top: 10px;
-      display: none;
-    }
-
-    /* Custom words list */
-    .word-row {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 12px 0;
-      border-bottom: 1px solid var(--border2);
-    }
-
-    .word-row:last-child { border-bottom: none; }
-
-    .word-row-word {
-      font-family: 'Lora', serif;
-      font-weight: 600;
-      font-size: 15px;
-    }
-
-    .word-row-pos {
-      font-family: 'DM Mono', monospace;
-      font-size: 10px;
-      color: var(--accent);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      margin-bottom: 3px;
-    }
-
-    .word-row-def { font-size: 13px; color: var(--ink2); line-height: 1.5; }
-
-    .section-title {
-      font-family: 'Lora', serif;
-      font-size: 1rem;
-      font-weight: 600;
-      margin-bottom: 1rem;
-      padding-bottom: 0.75rem;
-      border-bottom: 1px solid var(--border2);
-    }
-
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-    .fade-in { animation: fadeIn 0.2s ease forwards; }
-  </style>
+</style>
 </head>
 <body>
 
 <header>
-  <h1>My <span>Dictionary</span></h1>
-  <p>Look up words · Add missing words · Build games on top</p>
+  <h1>xiNix Word Games</h1>
 </header>
 
-<main class="main">
+<main>
+  
+  <div class="Developing">
+    <h2>Developing</h2>
 
-  <!-- Search bar -->
-  <div class="search-box">
-    <input type="text" id="search-input" placeholder="Search for a word…" autocomplete="off" />
-    <button onclick="handleSearch()">Look up</button>
   </div>
 
-  <!-- Tabs -->
-  <div class="tabs">
-    <button class="tab active" onclick="switchTab('lookup')">Look up</button>
-    <button class="tab" onclick="switchTab('add')">Add a word</button>
-    <button class="tab" onclick="switchTab('custom')">My words</button>
+  <div class="Finished">
+    <h2>Finished</h2>
+    <a href="word_shaker_solver.html">Word Shaker Solver</a>
   </div>
 
-  <!-- LOOKUP TAB -->
-  <div id="tab-lookup">
-    <div class="card">
-      <div id="lookup-result" class="banner-empty">Type a word above and hit Look up</div>
-    </div>
-  </div>
-
-  <!-- ADD WORD TAB -->
-  <div id="tab-add" style="display:none">
-    <div class="card">
-      <div class="section-title">Add a missing word</div>
-      <div class="form-grid">
-        <div class="field">
-          <label>Word</label>
-          <input type="text" id="add-word" placeholder="e.g. rizz" />
-        </div>
-        <div class="field">
-          <label>Part of speech</label>
-          <select id="add-pos">
-            <option value="noun">noun</option>
-            <option value="verb">verb</option>
-            <option value="adjective">adjective</option>
-            <option value="adverb">adverb</option>
-            <option value="interjection">interjection</option>
-            <option value="other">other</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Definition</label>
-          <textarea id="add-def" placeholder="What does it mean?"></textarea>
-        </div>
-        <div class="field">
-          <label>Example sentence <span style="font-weight:300;text-transform:none;letter-spacing:0">(optional)</span></label>
-          <input type="text" id="add-example" placeholder="Use it in a sentence…" />
-        </div>
-        <div class="field">
-          <label>Phonetic <span style="font-weight:300;text-transform:none;letter-spacing:0">(optional, e.g. /rɪz/)</span></label>
-          <input type="text" id="add-phonetic" placeholder="/rɪz/" />
-        </div>
-        <div>
-          <button class="btn-primary" onclick="addWord()">Save word</button>
-          <div class="success-msg" id="add-success">✓ Word saved to your dictionary!</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- CUSTOM WORDS TAB -->
-  <div id="tab-custom" style="display:none">
-    <div class="card">
-      <div class="section-title">My custom words</div>
-      <div id="custom-list"></div>
-    </div>
+  <div class="Archived">
+    <h2>Archived</h2>
+    <a href="dictionary_search_test.html">Dictionary Search Test</a>
   </div>
 
 </main>
-
-<script>
-  // ─── Custom words storage ───────────────────────────────────────────────────
-  // Words you add yourself, saved in the browser so they persist between visits.
-  // To pre-load words, add them to this object:
-  const BUILT_IN = {
-    // "rizz": { pos: "noun", definition: "Natural charm or ability to attract others.", example: "He's got so much rizz.", phonetic: "/rɪz/" },
-  };
-
-  function getCustomWords() {
-    try {
-      const saved = localStorage.getItem('myDictionary');
-      return saved ? JSON.parse(saved) : { ...BUILT_IN };
-    } catch { return { ...BUILT_IN }; }
-  }
-
-  function saveCustomWords(words) {
-    localStorage.setItem('myDictionary', JSON.stringify(words));
-  }
-
-  // ─── Tab switching ──────────────────────────────────────────────────────────
-  function switchTab(name) {
-    ['lookup','add','custom'].forEach((t, i) => {
-      document.getElementById('tab-' + t).style.display = t === name ? '' : 'none';
-      document.querySelectorAll('.tab')[i].classList.toggle('active', t === name);
-    });
-    if (name === 'custom') renderCustomList();
-  }
-
-  // ─── Search ─────────────────────────────────────────────────────────────────
-  document.getElementById('search-input').addEventListener('keydown', e => {
-    if (e.key === 'Enter') handleSearch();
-  });
-
-  async function handleSearch() {
-    const word = document.getElementById('search-input').value.trim().toLowerCase();
-    if (!word) return;
-    switchTab('lookup');
-    const el = document.getElementById('lookup-result');
-    el.innerHTML = '<div class="banner banner-loading">Looking up <strong>' + word + '</strong>…</div>';
-
-    // 1. Check custom words first
-    const custom = getCustomWords();
-    if (custom[word]) {
-      renderCustomResult(word, custom[word], el);
-      return;
-    }
-
-    // 2. Fall back to the free dictionary API
-    try {
-      const res = await fetch('https://api.dictionaryapi.dev/api/v2/entries/en/' + encodeURIComponent(word));
-      if (!res.ok) {
-        el.innerHTML = `
-          <div class="banner banner-error">
-            <strong>"${word}"</strong> wasn't found — try adding it in the <em>Add a word</em> tab!
-          </div>`;
-        return;
-      }
-      const data = await res.json();
-      renderAPIResult(data, el);
-    } catch {
-      el.innerHTML = '<div class="banner banner-error">Network error — check your internet connection.</div>';
-    }
-  }
-
-  // ─── Render: custom word result ─────────────────────────────────────────────
-  function renderCustomResult(word, entry, el) {
-    el.innerHTML = `
-      <div class="fade-in">
-        <div class="result-word">
-          <h2>${word}</h2>
-          ${entry.phonetic ? `<span class="phonetic">${entry.phonetic}</span>` : ''}
-          <span class="source-badge source-custom">My word</span>
-        </div>
-        <div class="meaning-block">
-          <div class="pos">${entry.pos}</div>
-          <ul class="def-list">
-            <li class="def-item">
-              <span class="def-num">1</span>
-              <div>
-                <div>${entry.definition}</div>
-                ${entry.example ? `<div class="def-example">"${entry.example}"</div>` : ''}
-              </div>
-            </li>
-          </ul>
-        </div>
-      </div>`;
-  }
-
-  // ─── Render: API result ──────────────────────────────────────────────────────
-  function renderAPIResult(data, el) {
-    const entry = data[0];
-    const phonetic = entry.phonetic || entry.phonetics?.find(p => p.text)?.text || '';
-    let html = `<div class="fade-in"><div class="result-word"><h2>${entry.word}</h2>`;
-    if (phonetic) html += `<span class="phonetic">${phonetic}</span>`;
-    html += `<span class="source-badge source-api">Dictionary</span></div>`;
-
-    entry.meanings.forEach(m => {
-      html += `<div class="meaning-block"><div class="pos">${m.partOfSpeech}</div><ul class="def-list">`;
-      m.definitions.slice(0, 4).forEach((d, i) => {
-        html += `<li class="def-item"><span class="def-num">${i + 1}</span><div><div>${d.definition}</div>`;
-        if (d.example) html += `<div class="def-example">"${d.example}"</div>`;
-        html += `</div></li>`;
-      });
-      html += `</ul></div>`;
-    });
-
-    html += `</div>`;
-    el.innerHTML = html;
-  }
-
-  // ─── Add word ────────────────────────────────────────────────────────────────
-  function addWord() {
-    const word = document.getElementById('add-word').value.trim().toLowerCase();
-    const pos = document.getElementById('add-pos').value;
-    const definition = document.getElementById('add-def').value.trim();
-    const example = document.getElementById('add-example').value.trim();
-    const phonetic = document.getElementById('add-phonetic').value.trim();
-
-    if (!word || !definition) {
-      alert('Please fill in at least the word and definition.');
-      return;
-    }
-
-    const custom = getCustomWords();
-    custom[word] = { pos, definition, example, phonetic };
-    saveCustomWords(custom);
-
-    // Clear form
-    document.getElementById('add-word').value = '';
-    document.getElementById('add-def').value = '';
-    document.getElementById('add-example').value = '';
-    document.getElementById('add-phonetic').value = '';
-
-    const msg = document.getElementById('add-success');
-    msg.style.display = 'block';
-    setTimeout(() => msg.style.display = 'none', 3000);
-  }
-
-  // ─── Custom words list ────────────────────────────────────────────────────────
-  function renderCustomList() {
-    const custom = getCustomWords();
-    const keys = Object.keys(custom).sort();
-    const el = document.getElementById('custom-list');
-
-    if (keys.length === 0) {
-      el.innerHTML = '<div class="banner-empty">No custom words yet — add some in the Add a word tab!</div>';
-      return;
-    }
-
-    el.innerHTML = keys.map(word => {
-      const e = custom[word];
-      return `
-        <div class="word-row">
-          <div>
-            <div class="word-row-pos">${e.pos}</div>
-            <div class="word-row-word">${word}</div>
-            <div class="word-row-def">${e.definition}</div>
-          </div>
-          <button class="btn-danger" onclick="deleteWord('${word}')">Remove</button>
-        </div>`;
-    }).join('');
-  }
-
-  function deleteWord(word) {
-    if (!confirm(`Remove "${word}" from your dictionary?`)) return;
-    const custom = getCustomWords();
-    delete custom[word];
-    saveCustomWords(custom);
-    renderCustomList();
-  }
-</script>
 
 </body>
 </html>
